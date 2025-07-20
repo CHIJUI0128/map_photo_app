@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
 void main() {
@@ -13,7 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Photo Picker App',
+      title: 'FoodMap Test',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -33,24 +32,19 @@ class _PhotoPickerScreenState extends State<PhotoPickerScreen> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  // 請求照片庫權限
-  Future<void> _requestPermission() async {
-    final status = await Permission.photos.request();
-    if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('需要照片庫權限以選擇照片')),
-      );
-    }
-  }
-
-  // 選擇照片
+  // Pick an image
   Future<void> _pickImage() async {
-    await _requestPermission();
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
+    try {
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _image = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('無法選擇照片：$e')),
+      );
     }
   }
 
