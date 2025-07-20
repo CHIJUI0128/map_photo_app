@@ -1,76 +1,83 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        home: MapPhotoPage(),
-        debugShowCheckedModeBanner: false,
-      );
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Photo Picker App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const PhotoPickerScreen(),
+    );
+  }
 }
 
-class MapPhotoPage extends StatefulWidget {
+class PhotoPickerScreen extends StatefulWidget {
+  const PhotoPickerScreen({super.key});
+
   @override
-  State<MapPhotoPage> createState() => _MapPhotoPageState();
+  _PhotoPickerScreenState createState() => _PhotoPickerScreenState();
 }
 
-class _MapPhotoPageState extends State<MapPhotoPage> {
-  Completer<GoogleMapController> _controller = Completer();
-  LatLng? _currentPosition;
+class _PhotoPickerScreenState extends State<PhotoPickerScreen> {
+  File? _image;
+  final ImagePicker _picker = ImagePicker();
 
-  @override
-  void initState() {
-    super.initState();
-    _getPermissionAndLocation();
-  }
-
-  Future<void> _getPermissionAndLocation() async {
-    await Permission.location.request();
-    if (await Geolocator.isLocationServiceEnabled()) {
-      final pos = await Geolocator.getCurrentPosition();
-      setState(() => _currentPosition = LatLng(pos.latitude, pos.longitude));
-    }
-  }
-
-  Future<void> _pickImage() async {
+  // 請求照片庫權限
+  Future<void> _requestPermission() async {
     final status = await Permission.photos.request();
     if (!status.isGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('請允許照片權限')),
+        const SnackBar(content: Text('需要照片庫權限以選擇照片')),
       );
-      return;
     }
+  }
 
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('選擇了圖片: ${image.name}')),
-      );
+  // 選擇照片
+  Future<void> _pickImage() async {
+    await _requestPermission();
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _currentPosition == null
-          ? Center(child: CircularProgressIndicator())
-          : GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _currentPosition!,
-                zoom: 16,
-              ),
-              myLocationEnabled: true,
-              onMapCreated: (controller) => _controller.complete(controller),
+      appBar: AppBar(
+        title: const Text('選擇並展示照片'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _image == null
+                ? const Text('尚未選擇照片')
+                : Image.file(
+                    _image!,
+                    height: 300,
+                    fit: BoxFit.contain,
+                  ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _pickImage,
+              child: const Text('選擇照片'),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _pickImage,
-        child: Icon(Icons.photo),
+          ],
+        ),
       ),
     );
   }
